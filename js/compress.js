@@ -306,3 +306,4 @@ class CompressController {
     return compressedBytes;
   }
 }
+

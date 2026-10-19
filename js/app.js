@@ -63,3 +63,4 @@ document.addEventListener('DOMContentLoaded', () => {
     bookmarkPathEl.textContent = isFile ? window.location.href : window.location.origin;
   }
 });
+

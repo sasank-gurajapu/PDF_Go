@@ -99,3 +99,4 @@ To push this project to GitHub:
 Traditional online PDF tools upload your sensitive documents (tax returns, bank statements, personal contracts) to third-party servers. 
 
 **PDF_Go processes everything locally in your Chrome browser sandbox.** No files ever leave your computer.
+
