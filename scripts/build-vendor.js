@@ -54,3 +54,4 @@ esbuild.buildSync({
 
 fs.unlinkSync(tempEntry);
 console.log('✅ Vendor bundles built successfully in vendor/ (pdf-lib, pdf.min.js, pdf.worker.min.js)!');
+

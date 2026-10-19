@@ -52,8 +52,20 @@ const Utils = {
     try {
       const arrayBuffer = await this.readFileAsArrayBuffer(file);
       const pdfDoc = await PDFLib.PDFDocument.load(arrayBuffer, { ignoreEncryption: true });
+      let imageCount = 0;
+      try {
+        for (const [ref, obj] of pdfDoc.context.enumerateIndirectObjects()) {
+          if (obj.dict && obj.dict.get(PDFLib.PDFName.of('Subtype'))?.toString() === '/Image') {
+            imageCount++;
+          }
+        }
+      } catch (e) {}
+
+      const pageCount = pdfDoc.getPageCount();
       return {
-        pageCount: pdfDoc.getPageCount(),
+        pageCount,
+        imageCount,
+        isScanned: imageCount >= pageCount && pageCount > 0,
         isEncrypted: pdfDoc.isEncrypted,
         size: file.size,
         name: file.name
@@ -62,6 +74,8 @@ const Utils = {
       console.warn('Could not inspect PDF with pdf-lib:', err);
       return {
         pageCount: null,
+        imageCount: 0,
+        isScanned: false,
         isEncrypted: false,
         size: file.size,
         name: file.name

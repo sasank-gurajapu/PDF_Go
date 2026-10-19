@@ -150,10 +150,11 @@
         <div class="form-group">
           <label class="form-label" for="compress-preset">Compression Preset</label>
           <select id="compress-preset" class="form-select">
-            <option value="recommended" selected>Balanced (~120-140 DPI, 70% Quality) — Recommended</option>
-            <option value="extreme">Maximum Compression (~72-96 DPI, 50% Quality) — Smallest Size</option>
-            <option value="crisp">High Quality (~160-200 DPI, 85% Quality) — Clear &amp; Crisp</option>
-            <option value="lossless">Lossless Optimization — Preserves 100% Vector &amp; Text</option>
+            <option value="auto" selected>✨ Smart Auto-Optimize (Guaranteed smaller or equal size)</option>
+            <option value="lossless">⚡ Lossless Vector Optimization (100% Text &amp; Vector Clarity)</option>
+            <option value="scan_compact">📉 Scanned / Image PDF: Compact (~72-96 DPI, 50% Quality)</option>
+            <option value="scan_balanced">⚖️ Scanned / Image PDF: Balanced (~100-120 DPI, 65% Quality)</option>
+            <option value="scan_grayscale">🖤 Scanned / Image PDF: Grayscale B&amp;W (~96 DPI, 50% Quality)</option>
           </select>
         </div>
       </div>

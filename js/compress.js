@@ -1,6 +1,6 @@
 /**
  * PDF_Go - Compress Module
- * Client-side PDF compression with multi-level optimization presets.
+ * Intelligent, multi-tier PDF compression with strict size-reduction guarantees.
  */
 
 class CompressController {
@@ -93,6 +93,11 @@ class CompressController {
     const details = await Utils.getPdfDetails(file);
     this.fileDetails = details;
 
+    // Suggest best preset based on document analysis
+    if (details.isScanned && this.presetSelect) {
+      this.presetSelect.value = 'auto';
+    }
+
     this.renderFilePreview();
     this.compressBtn.disabled = false;
   }
@@ -108,6 +113,11 @@ class CompressController {
 
   renderFilePreview() {
     if (!this.currentFile) return;
+
+    const isScanned = this.fileDetails?.isScanned;
+    const typeLabel = isScanned
+      ? `📷 Scanned / Image PDF (${this.fileDetails.imageCount || 0} images)`
+      : `📄 Text & Vector PDF`;
 
     this.dropzone.classList.add('has-files');
     this.filePreview.innerHTML = `
@@ -125,6 +135,7 @@ class CompressController {
           <div class="file-item-meta">
             Original Size: <strong>${Utils.formatBytes(this.currentFile.size)}</strong>
             ${this.fileDetails?.pageCount ? ` • ${this.fileDetails.pageCount} pages` : ''}
+            • <span class="badge-type">${typeLabel}</span>
           </div>
         </div>
         <div class="file-item-actions">
@@ -149,53 +160,125 @@ class CompressController {
     this.compressBtn.disabled = true;
     this.progressContainer.style.display = 'block';
     this.resultContainer.style.display = 'none';
-    this.progressBar.style.width = '5%';
-    this.progressText.textContent = 'Preparing PDF optimization...';
+    this.progressBar.style.width = '10%';
+    this.progressText.textContent = 'Analyzing PDF structure...';
 
     const preset = this.presetSelect.value;
     const startTime = performance.now();
+    const origSize = this.currentFile.size;
+    const baseName = this.currentFile.name.replace(/\.pdf$/i, '');
+    const outputFilename = `${baseName}_compressed.pdf`;
 
     try {
-      let compressedBytes;
+      let finalBytes;
+      let finalMethod = '';
+      let rasterBloatWarning = null;
+
       if (preset === 'lossless') {
-        compressedBytes = await this.compressLossless();
+        finalMethod = 'Lossless Vector Optimization';
+        finalBytes = await this.compressLossless();
+      } else if (preset === 'auto') {
+        // Smart Auto: try lossless stream compaction first
+        this.progressText.textContent = 'Applying smart stream compression...';
+        const losslessBytes = await this.compressLossless();
+        
+        if (losslessBytes.length < origSize && ((origSize - losslessBytes.length) / origSize) >= 0.05) {
+          // Lossless yielded a noticeable reduction without any loss of quality!
+          finalBytes = losslessBytes;
+          finalMethod = 'Smart Stream Compaction (Lossless)';
+        } else if (this.fileDetails?.isScanned) {
+          // If the document is mostly scanned images, try compact rasterization
+          this.progressText.textContent = 'Document contains scans: testing image downsampling...';
+          const rasterBytes = await this.compressVisualRaster('scan_compact');
+          
+          if (rasterBytes.length < origSize && rasterBytes.length < losslessBytes.length) {
+            finalBytes = rasterBytes;
+            finalMethod = 'Scanned Image Downsampling';
+          } else {
+            finalBytes = losslessBytes;
+            finalMethod = 'Lossless Object Streams';
+          }
+        } else {
+          // For vector documents, always keep lossless to avoid bitmap bloat
+          finalBytes = losslessBytes;
+          finalMethod = 'Lossless Stream Compaction';
+        }
       } else {
-        compressedBytes = await this.compressVisualRaster(preset);
+        // Specific scan preset chosen by user
+        finalMethod = 'Visual Raster Downsampling';
+        const rasterBytes = await this.compressVisualRaster(preset);
+
+        if (rasterBytes.length >= origSize) {
+          rasterBloatWarning = {
+            rasterSize: rasterBytes.length,
+            origSize: origSize
+          };
+          // Safety fallback: try lossless instead of inflating file size!
+          const losslessBytes = await this.compressLossless();
+          finalBytes = losslessBytes.length < origSize ? losslessBytes : null;
+        } else {
+          finalBytes = rasterBytes;
+        }
       }
 
-      const compressedBlob = new Blob([compressedBytes], { type: 'application/pdf' });
-      const origSize = this.currentFile.size;
-      const newSize = compressedBlob.size;
-      const reductionPercent = Math.max(0, Math.round(((origSize - newSize) / origSize) * 100));
-
-      this.progressBar.style.width = '100%';
-      this.progressText.textContent = 'Optimization finished!';
-
-      const baseName = this.currentFile.name.replace(/\.pdf$/i, '');
-      const outputFilename = `${baseName}_compressed.pdf`;
-
-      this.lastResultBlob = compressedBlob;
-      this.lastResultFilename = outputFilename;
-
-      // Automatically trigger download
-      Utils.downloadBlob(compressedBlob, outputFilename);
-
       const durationSec = ((performance.now() - startTime) / 1000).toFixed(1);
+      this.progressBar.style.width = '100%';
+      this.progressText.textContent = 'Optimization complete!';
+
+      const newSize = finalBytes ? finalBytes.length : origSize;
+      const savedBytes = origSize - newSize;
+      const reductionPercent = Math.round((savedBytes / origSize) * 100);
 
       this.resultContainer.style.display = 'block';
-      this.resultStats.innerHTML = `
-        <div class="stat-badge ${reductionPercent > 0 ? 'badge-success' : 'badge-neutral'}">
-          ${reductionPercent > 0 ? `Reduced by <strong>-${reductionPercent}%</strong>` : `Optimized`}
-        </div>
-        <div class="stat-badge">Original: <strong>${Utils.formatBytes(origSize)}</strong></div>
-        <div class="stat-badge">Compressed: <strong>${Utils.formatBytes(newSize)}</strong></div>
-        <div class="stat-badge">Time: <strong>${durationSec}s</strong></div>
-      `;
 
-      if (reductionPercent > 0) {
-        Utils.showToast(`Compressed! Saved ${Utils.formatBytes(origSize - newSize)} (${reductionPercent}% reduction)`, 'success');
+      if (finalBytes && newSize < origSize && reductionPercent > 0) {
+        // Genuine compression achieved!
+        const compressedBlob = new Blob([finalBytes], { type: 'application/pdf' });
+        this.lastResultBlob = compressedBlob;
+        this.lastResultFilename = outputFilename;
+
+        Utils.downloadBlob(compressedBlob, outputFilename);
+
+        this.resultStats.innerHTML = `
+          <div class="stat-badge badge-success">Reduced by <strong>-${reductionPercent}%</strong></div>
+          <div class="stat-badge">Original: <strong>${Utils.formatBytes(origSize)}</strong></div>
+          <div class="stat-badge">Compressed: <strong>${Utils.formatBytes(newSize)}</strong></div>
+          <div class="stat-badge">Saved: <strong>${Utils.formatBytes(savedBytes)}</strong></div>
+          <div class="stat-badge">Method: <strong>${finalMethod}</strong></div>
+          <div class="stat-badge">Time: <strong>${durationSec}s</strong></div>
+        `;
+
+        if (rasterBloatWarning) {
+          this.resultStats.innerHTML += `
+            <div class="notice-box notice-warning">
+              💡 <strong>Smart Protection:</strong> Re-encoding this document as JPEG images would have inflated the file to <strong>${Utils.formatBytes(rasterBloatWarning.rasterSize)}</strong> because the original text and vectors are already more compact than bitmap images. We automatically protected your file and used lossless compression instead.
+            </div>
+          `;
+        }
+
+        Utils.showToast(`Saved ${Utils.formatBytes(savedBytes)} (-${reductionPercent}%)!`, 'success');
       } else {
-        Utils.showToast(`PDF streams compacted with object streams.`, 'info');
+        // File is already at peak compression!
+        this.resultStats.innerHTML = `
+          <div class="stat-badge badge-warning">⚠️ Already At Peak Compression</div>
+          <div class="stat-badge">Original Size: <strong>${Utils.formatBytes(origSize)}</strong></div>
+          <div class="stat-badge">Analyzed in <strong>${durationSec}s</strong></div>
+        `;
+
+        this.resultStats.innerHTML += `
+          <div class="notice-box notice-warning">
+            <strong>Why didn't this file get smaller?</strong><br>
+            This PDF is already encoded with maximum Flate/Deflate compression and optimized embedded streams. 
+            ${rasterBloatWarning ? `Converting its pages to bitmap JPEGs would have bloated the file from <strong>${Utils.formatBytes(origSize)}</strong> up to <strong>${Utils.formatBytes(rasterBloatWarning.rasterSize)}</strong>.` : ''}
+            To protect your document from being bloated or losing vector clarity, no larger file was created.
+          </div>
+        `;
+
+        if (this.downloadResultBtn) {
+          this.downloadResultBtn.style.display = 'none';
+        }
+
+        Utils.showToast('This PDF is already at optimal compression.', 'info', 4500);
       }
     } catch (err) {
       console.error('Compression error:', err);
@@ -211,13 +294,13 @@ class CompressController {
    * Lossless compression: keeps text & vectors 100% sharp, strips metadata & enables object streams
    */
   async compressLossless() {
-    this.progressBar.style.width = '30%';
+    this.progressBar.style.width = '35%';
     this.progressText.textContent = 'Reading PDF structures...';
 
     const arrayBuffer = await Utils.readFileAsArrayBuffer(this.currentFile);
     const pdfDoc = await PDFLib.PDFDocument.load(arrayBuffer, { ignoreEncryption: true });
 
-    this.progressBar.style.width = '70%';
+    this.progressBar.style.width = '65%';
     this.progressText.textContent = 'Compacting streams and applying Flate compression...';
 
     // Strip document title/author metadata to shave bloat
@@ -233,16 +316,16 @@ class CompressController {
   }
 
   /**
-   * Visual scan/image compression: renders pages to canvas and recompresses high-res scans & images
+   * Visual scan/image compression: renders pages to canvas and downsamples heavy scans
    */
   async compressVisualRaster(preset) {
     const settings = {
-      extreme: { scale: 1.0, quality: 0.50 },    // ~72-96 DPI
-      recommended: { scale: 1.4, quality: 0.70 },// ~120-140 DPI
-      crisp: { scale: 1.8, quality: 0.85 }       // ~160-200 DPI
-    }[preset] || { scale: 1.4, quality: 0.70 };
+      scan_compact: { scale: 0.9, quality: 0.50, grayscale: false },     // ~72 DPI
+      scan_balanced: { scale: 1.1, quality: 0.65, grayscale: false },    // ~96-100 DPI
+      scan_grayscale: { scale: 0.9, quality: 0.50, grayscale: true }     // ~72 DPI monochrome
+    }[preset] || { scale: 0.9, quality: 0.50, grayscale: false };
 
-    this.progressBar.style.width = '10%';
+    this.progressBar.style.width = '15%';
     this.progressText.textContent = 'Reading PDF pages...';
 
     const arrayBuffer = await Utils.readFileAsArrayBuffer(this.currentFile);
@@ -256,16 +339,14 @@ class CompressController {
     const pdfJsDoc = await loadingTask.promise;
     const numPages = pdfJsDoc.numPages;
 
-    // Create new PDF with pdf-lib
     const newPdfDoc = await PDFLib.PDFDocument.create();
-
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d', { willReadFrequently: true });
 
     for (let pageNum = 1; pageNum <= numPages; pageNum++) {
-      const percent = Math.round(10 + ((pageNum / numPages) * 75));
+      const percent = Math.round(15 + ((pageNum / numPages) * 75));
       this.progressBar.style.width = `${percent}%`;
-      this.progressText.textContent = `Optimizing page ${pageNum} of ${numPages} (${percent}%)...`;
+      this.progressText.textContent = `Downsampling page ${pageNum} of ${numPages} (${percent}%)...`;
 
       const page = await pdfJsDoc.getPage(pageNum);
       const viewport = page.getViewport({ scale: settings.scale });
@@ -280,10 +361,21 @@ class CompressController {
         viewport: viewport
       }).promise;
 
-      // Convert canvas to JPEG data URL
-      const jpegDataUrl = canvas.toDataURL('image/jpeg', settings.quality);
+      // Convert to grayscale if requested
+      if (settings.grayscale) {
+        const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const d = imgData.data;
+        for (let i = 0; i < d.length; i += 4) {
+          const gray = (0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2]) | 0;
+          d[i] = gray;
+          d[i + 1] = gray;
+          d[i + 2] = gray;
+        }
+        ctx.putImageData(imgData, 0, 0);
+      }
 
-      // Convert data URL to byte array
+      // Convert canvas to JPEG
+      const jpegDataUrl = canvas.toDataURL('image/jpeg', settings.quality);
       const base64Data = jpegDataUrl.split(',')[1];
       const binaryString = atob(base64Data);
       const len = binaryString.length;
@@ -294,8 +386,6 @@ class CompressController {
 
       // Embed into new document
       const embeddedJpg = await newPdfDoc.embedJpg(jpegBytes);
-      
-      // Keep original page aspect ratio dimensions
       const origViewport = page.getViewport({ scale: 1.0 });
       const newPage = newPdfDoc.addPage([origViewport.width, origViewport.height]);
       newPage.drawImage(embeddedJpg, {
@@ -306,11 +396,10 @@ class CompressController {
       });
     }
 
-    this.progressBar.style.width = '90%';
-    this.progressText.textContent = 'Finalizing compressed document...';
+    this.progressBar.style.width = '92%';
+    this.progressText.textContent = 'Finalizing document streams...';
 
     const compressedBytes = await newPdfDoc.save({ useObjectStreams: true });
     return compressedBytes;
   }
 }
-

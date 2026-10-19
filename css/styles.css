@@ -553,6 +553,42 @@ body {
   border-color: var(--success-color);
 }
 
+.stat-badge.badge-warning {
+  background: #fef3c7;
+  color: #b45309;
+  border-color: #f59e0b;
+}
+
+[data-theme="dark"] .stat-badge.badge-warning {
+  background: #451a03;
+  color: #fde68a;
+  border-color: #d97706;
+}
+
+.notice-box {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-left: 4px solid var(--accent-color);
+  padding: 0.75rem 1rem;
+  border-radius: var(--radius-sm);
+  margin-top: 0.75rem;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  line-height: 1.4;
+}
+
+.notice-box.notice-warning {
+  border-left-color: #f59e0b;
+  background: #fffbeb;
+  color: #92400e;
+}
+
+[data-theme="dark"] .notice-box.notice-warning {
+  background: #1c1917;
+  color: #fde68a;
+  border-left-color: #f59e0b;
+}
+
 /* Toasts */
 #toast-container {
   position: fixed;
