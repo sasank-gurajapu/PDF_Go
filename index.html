@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PDF_Go — Local PDF Merge & Compress</title>
+  <link rel="stylesheet" href="css/styles.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%233b82f6'><path d='M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z'/></svg>">
+</head>
+<body>
+
+  <!-- Top App Header -->
+  <header class="app-header">
+    <div class="header-container">
+      <a href="#" class="brand">
+        <div class="brand-icon">📑</div>
+        <span>PDF_Go</span>
+      </a>
+      <div class="header-actions">
+        <span class="privacy-pill" title="All processing happens directly in your browser. No files are uploaded to any server.">
+          🔒 100% Local &amp; Private
+        </span>
+        <button id="theme-toggle-btn" class="btn-theme" type="button" aria-label="Toggle theme">
+          🌙
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Bookmark Guidance Banner -->
+  <aside class="bookmark-banner">
+    💡 <strong>Tip:</strong> Press <kbd>⌘ + D</kbd> (Mac) or <kbd>Ctrl + D</kbd> (Windows) to bookmark this page in Chrome for instant 1-click access anytime!
+  </aside>
+
+  <!-- Main Work Area -->
+  <main class="main-wrapper">
+    <!-- Tabs Switcher -->
+    <nav class="tabs-nav" aria-label="Tool selection">
+      <button class="nav-tab active" data-tab="merge" type="button">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+          <line x1="12" y1="8" x2="12" y2="16"></line>
+          <line x1="8" y1="12" x2="16" y2="12"></line>
+        </svg>
+        Merge PDFs
+      </button>
+      <button class="nav-tab" data-tab="compress" type="button">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="4 14 10 14 10 20"></polyline>
+          <polyline points="20 10 14 10 14 4"></polyline>
+          <line x1="14" y1="10" x2="21" y2="3"></line>
+          <line x1="3" y1="21" x2="10" y2="14"></line>
+        </svg>
+        Compress PDF
+      </button>
+    </nav>
+
+    <!-- Tab 1: Merge PDFs -->
+    <section id="tab-merge" class="tab-content active">
+      <div class="section-header">
+        <h2>Merge Multiple PDFs</h2>
+        <p>Combine multiple PDF files into a single organized document. Drag to reorder, add or remove files.</p>
+      </div>
+
+      <!-- Dropzone -->
+      <div id="merge-dropzone" class="dropzone" onclick="document.getElementById('merge-file-input').click()">
+        <input type="file" id="merge-file-input" class="dropzone-input" accept=".pdf,application/pdf" multiple>
+        <svg class="dropzone-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+          <polyline points="17 8 12 3 7 8"></polyline>
+          <line x1="12" y1="3" x2="12" y2="15"></line>
+        </svg>
+        <div class="dropzone-title">Drag &amp; drop PDF files here</div>
+        <div class="dropzone-subtitle">or click to browse from your computer</div>
+      </div>
+
+      <!-- File List Queue -->
+      <div id="merge-file-list" class="file-list"></div>
+
+      <!-- Merge Options -->
+      <div class="controls-row">
+        <div class="form-group">
+          <label class="form-label" for="merge-output-name">Output File Name</label>
+          <input type="text" id="merge-output-name" class="form-input" placeholder="merged_document.pdf" value="merged_document.pdf">
+        </div>
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="action-buttons">
+        <button id="merge-submit-btn" class="btn-primary" type="button" disabled>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="8 17 12 21 16 17"></polyline>
+            <line x1="12" y1="12" x2="12" y2="21"></line>
+            <path d="M20.88 18.09A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.29"></path>
+          </svg>
+          Merge PDFs &amp; Download
+        </button>
+        <button id="merge-add-more-btn" class="btn-secondary" type="button" style="display:none;">
+          + Add More PDFs
+        </button>
+        <button id="merge-clear-btn" class="btn-secondary" type="button" style="display:none;">
+          Clear All
+        </button>
+      </div>
+
+      <!-- Progress Bar -->
+      <div id="merge-progress-container" class="progress-container">
+        <div class="progress-track">
+          <div id="merge-progress-bar" class="progress-fill"></div>
+        </div>
+        <div id="merge-progress-text" class="progress-text">Processing...</div>
+      </div>
+
+      <!-- Result Card -->
+      <div id="merge-result-container" class="result-container">
+        <div class="result-title">
+          <span>✓</span> Merge Successful!
+        </div>
+        <div id="merge-result-stats" class="result-stats"></div>
+        <button id="merge-download-result-btn" class="btn-primary" type="button">
+          Download Again
+        </button>
+      </div>
+    </section>
+
+    <!-- Tab 2: Compress PDF -->
+    <section id="tab-compress" class="tab-content">
+      <div class="section-header">
+        <h2>Compress &amp; Optimize PDF</h2>
+        <p>Reduce PDF file size locally. Perfect for email attachments, web uploads, and scanned documents.</p>
+      </div>
+
+      <!-- Dropzone -->
+      <div id="compress-dropzone" class="dropzone" onclick="document.getElementById('compress-file-input').click()">
+        <input type="file" id="compress-file-input" class="dropzone-input" accept=".pdf,application/pdf">
+        <svg class="dropzone-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+          <polyline points="17 8 12 3 7 8"></polyline>
+          <line x1="12" y1="3" x2="12" y2="15"></line>
+        </svg>
+        <div class="dropzone-title">Drag &amp; drop a PDF to compress</div>
+        <div class="dropzone-subtitle">or click to browse from your computer</div>
+      </div>
+
+      <!-- File Preview Area -->
+      <div id="compress-file-preview" class="file-list"></div>
+
+      <!-- Compression Options -->
+      <div class="controls-row">
+        <div class="form-group">
+          <label class="form-label" for="compress-preset">Compression Preset</label>
+          <select id="compress-preset" class="form-select">
+            <option value="recommended" selected>Balanced (~120-140 DPI, 70% Quality) — Recommended</option>
+            <option value="extreme">Maximum Compression (~72-96 DPI, 50% Quality) — Smallest Size</option>
+            <option value="crisp">High Quality (~160-200 DPI, 85% Quality) — Clear &amp; Crisp</option>
+            <option value="lossless">Lossless Optimization — Preserves 100% Vector &amp; Text</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="action-buttons">
+        <button id="compress-submit-btn" class="btn-primary" type="button" disabled>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="4 14 10 14 10 20"></polyline>
+            <polyline points="20 10 14 10 14 4"></polyline>
+            <line x1="14" y1="10" x2="21" y2="3"></line>
+            <line x1="3" y1="21" x2="10" y2="14"></line>
+          </svg>
+          Compress PDF &amp; Download
+        </button>
+      </div>
+
+      <!-- Progress Bar -->
+      <div id="compress-progress-container" class="progress-container">
+        <div class="progress-track">
+          <div id="compress-progress-bar" class="progress-fill"></div>
+        </div>
+        <div id="compress-progress-text" class="progress-text">Processing...</div>
+      </div>
+
+      <!-- Result Card -->
+      <div id="compress-result-container" class="result-container">
+        <div class="result-title">
+          <span>✓</span> Compression Complete!
+        </div>
+        <div id="compress-result-stats" class="result-stats"></div>
+        <button id="compress-download-result-btn" class="btn-primary" type="button">
+          Download Again
+        </button>
+      </div>
+    </section>
+  </main>
+
+  <!-- Footer -->
+  <footer class="app-footer">
+    PDF_Go • 100% Client-Side In-Browser PDF Tool • No data is ever uploaded to external servers.
+  </footer>
+
+  <!-- Scripts -->
+  <script src="vendor/pdf-lib.min.js"></script>
+  <script src="vendor/pdf.min.js"></script>
+  <script src="js/utils.js"></script>
+  <script src="js/merge.js"></script>
+  <script src="js/compress.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
