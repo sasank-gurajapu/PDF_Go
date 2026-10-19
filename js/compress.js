@@ -25,6 +25,13 @@ class CompressController {
     this.lastResultBlob = null;
     this.lastResultFilename = '';
 
+    // Ensure PDF.js worker options are configured
+    if (typeof pdfjsLib !== 'undefined' && pdfjsLib.GlobalWorkerOptions) {
+      if (!pdfjsLib.GlobalWorkerOptions.workerSrc) {
+        pdfjsLib.GlobalWorkerOptions.workerSrc = './vendor/pdf.worker.min.js';
+      }
+    }
+
     this.initEvents();
   }
 
