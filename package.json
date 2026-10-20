@@ -5,7 +5,9 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "bundle:vendor": "node scripts/build-vendor.js"
+    "bundle:vendor": "node scripts/build-vendor.js",
+    "build:icons": "node scripts/generate-icons.js",
+    "package": "node scripts/package.js"
   },
   "keywords": [
     "pdf",

@@ -1,0 +1,22 @@
+{
+  "manifest_version": 3,
+  "name": "PDF_Go — Local PDF Merge & Compress",
+  "version": "1.0.0",
+  "description": "100% private, local in-browser PDF utilities: Merge PDFs & Compress PDFs with zero server uploads.",
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "action": {
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    },
+    "default_title": "Open PDF_Go"
+  },
+  "background": {
+    "service_worker": "js/extension-background.js"
+  }
+}
